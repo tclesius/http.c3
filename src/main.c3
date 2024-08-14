@@ -69,7 +69,7 @@ fn void main()
 	// io::printfn("%s", response[1]);
 	//Object* json = json::parse_string(response[1])!!;
 	//io::printfn(json.get_string("ip")!!);
-    String url = "http://example.com:8080/path/path?query=value#fragment";
+    String url = "http://example.com";
 	Url! parsed = url::parse(url);
     if (catch err = parsed)
     {
@@ -77,11 +77,12 @@ fn void main()
     }
     else
     {
-		//io::printfn("Scheme: %s", parsed.scheme);
-        //io::printfn("Host: %s", parsed.host);
-        //io::printfn("Port: %d", parsed.port);
-        //io::printfn("Path: %s", parsed.path);
-        //io::printfn("Query: %s", parsed.query);
-        //io::printfn("Fragment: %s", parsed.fragment);
+		io::printfn("Scheme: %s", parsed.scheme);
+        io::printfn("Host: %s", parsed.host);
+        io::printfn("Port: %d", parsed.port);
+        io::printfn("Path: %s", parsed.path);
+        io::printfn("Query: %s", parsed.query);
+        io::printfn("Fragment: %s", parsed.fragment);
+		io::printfn("Userinfo: %s", parsed.userinfo);
     }
 }

@@ -9,30 +9,83 @@ struct Url
     String path;
     String query;
     String fragment;
-}
-
-fault UrlError
-{
-    TEST,
+    String userinfo;
 }
 
 
-fn String isubstring(String self, String start_pattern, String end_pattern)
+fn uint default_port(String scheme)
 {
-    usz! start = self.index_of(start_pattern);
-    if (catch start) return "";
-    
-    usz search_start = start + start_pattern.len;
-    usz! end = self[search_start..].index_of(end_pattern);
-    if (catch end) return "";
-    
-    return self[start + start_pattern.len : search_start + end];
+    switch (scheme)
+    {
+        case "http": return 80;
+        case "https": return 443;
+        default: return 80; // default throw error ?
+    }
 }
 
 fn Url! parse(String url)
 {
     Url result;
-    io::printfn(isubstring(url, "://", ":"));
-    io::printfn(isubstring(url, "://", ":"));
+    
+    // Extract scheme
+    if (try usz scheme_end = url.index_of("://")) 
+    {
+        // io::printfn("%d %d",scheme_end, url.len);
+        result.scheme = url[0..scheme_end-1];
+        url = url[scheme_end+3..url.len-1];
+    }
+
+    // Extract fragment
+    if (try usz fragment_start = url.index_of("#")) 
+    {
+        result.fragment = url[fragment_start+1..url.len-1];
+        url = url[0..fragment_start-1];
+    }
+
+    // Extract query
+    if (try usz query_start = url.index_of("?")) 
+    {
+        result.query = url[query_start+1..url.len-1];
+        url = url[0..query_start-1];
+    }
+
+    // Extract userinfo
+    if (try usz userinfo_end = url.index_of("@")) 
+    {
+        result.userinfo = url[0..userinfo_end-1];
+        url = url[userinfo_end+1..url.len-1];
+    }
+
+    // Extract host and port
+    usz! path_start = url.index_of("/");
+    usz host_end = path_start ?? url.len-1;
+
+    if (try usz port_start = url[0..host_end].index_of(":"))
+    {
+        result.host = url[0..port_start-1];
+        if(try uint port = url[port_start+1..host_end-1].to_uint()){
+            result.port = port;
+        } 
+        else 
+        {
+            // TODO: maybe throw an error or try to unpack to_uint
+        }
+    } 
+    else 
+    {
+        result.host = url[0..host_end];
+        result.port = default_port(result.scheme); // Default port if not specified
+    }
+
+    // Extract path
+    if (try path_start) 
+    {
+        result.path = url[path_start..url.len-1];
+    } 
+    else 
+    {
+        result.path = "/";
+    }
+
     return result;
 }

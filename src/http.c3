@@ -1,40 +1,50 @@
 module http;
+import url;
 
-//fn ... request(String method, url, args...){
-//
-//}
-//
-//fn ... get()
-//{
-//
-//} 
-//
-//fn ... options()
-//{
-//
-//}
-//
-//fn ... head()
-//{
-//
-//}
-//
-//fn ... post()
-//{
-//    
-//} 
-//
-//fn ... put()
-//{
-//    
-//} 
-//
-//fn ... patch()
-//{
-//    
-//} 
-//
-//fn ... delete()
-//{
-//    
-//} 
+struct Response {}
+
+
+fn Object Response.json()
+{
+
+}
+
+fn Response request(String method, String url, args...)
+{
+
+}
+
+fn Response get()
+{
+
+} 
+
+fn Response options()
+{
+
+}
+
+fn Response head()
+{
+
+}
+
+fn Response post()
+{
+    
+} 
+
+fn Response put()
+{
+    
+} 
+
+fn Response patch()
+{
+    
+} 
+
+fn Response delete()
+{
+    
+} 
