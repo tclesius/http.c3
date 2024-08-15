@@ -13,11 +13,24 @@ struct Header {
     String value;
 }
 
-struct Response {
-    uint status;
-    String body;
+struct Response { // maybe put byte writer and byte reader in here
+    String protocol;
+    uint code;
+    String status;
+    String body; 
     List(<Header>) headers;
 }
+
+struct Request 
+{
+    String protocol;
+    String method;
+    Url url;
+    List(<Header>) headers;
+}
+
+
+////
 
 fn Object*! Response.json(Response* self)
 {
@@ -29,12 +42,7 @@ fn String Response.text(Response* self)
     return self.body;
 }
 
-struct Request 
-{
-    String method;
-    Url url;
-    List(<Header>) headers;
-}
+////
 
 fn Request Request.header(&self, String key, String value)
 {
@@ -42,48 +50,78 @@ fn Request Request.header(&self, String key, String value)
     return *self; // TODO: should pass by reference 
 }
 
-fn Response! Request.send(&self)
+fn Response Request.send(&self)
 {
-    TcpSocket! sock = tcp::connect(self.url.host, self.url.port,{});
-    defer sock.destroy()!!;
-    if (catch err = sock)
-	{
-		io::printfn("Could not connect to host");
-		return err?;
-	}
-    // Connection can be keep-alive or close
-    char[] http_request = string::new_format("%s %s HTTP/1.1\r\nHost: %s \r\nConnection: close\r\n\r\n", self.method, self.url.path, self.url.host);
-	usz! bytes_written = sock.write(http_request);
-	if (catch err = bytes_written)
-	{
-		io::printfn("Could not send data to host");
-		return err?;
-	}
-	
+    self.protocol = "HTTP/1.1";
 
+    Response res;
     ByteWriter w;
-    w.new_init();
-    char[4096] buffer;
+    w.temp_init();
     
+    TcpSocket! sock = tcp::connect(self.url.host, self.url.port, {});    
+    defer sock.destroy()!!;
+
+    w.write(self.method)!!;
+    w.write(" ")!!;
+    w.write(self.url.path)!!;
+    w.write(" ")!!;
+    w.write(self.protocol)!!;
+    w.write("\r\n")!!;
+    
+    // TODO: ensure in some way that these are in the request headers
+    self.headers.push({.key="Connection", .value="close"}); // Connection can be keep-alive or close 
+    self.headers.push({.key="Host", .value=self.url.host});
+
+    foreach(header: self.headers)
+    {
+        //io::printfn("%s %s", header.key, header.value);
+        w.write(header.key.concat(": ").concat(header.value).concat("\n"))!!;
+    }
+    w.write("\r\n\r\n")!!;
+    
+    io::printfn("%s", w.str_view());
+    
+    usz! bytes_written = sock.write(w.str_view());
+	
+    //io::printfn("%d %s", bytes_written!!, w.str_view());
+
+    w.destroy()!!;
+    w.temp_init();
+    char[4096] buffer;
     while(try usz bytes_received = sock.read(buffer[:buffer.len]) && bytes_received > 0)
     {
         w.write(buffer[:buffer.len])!!;
-        if(((String)buffer[:buffer.len]).contains("\r\n\r\n"))
+        if(((String)buffer[:buffer.len]).contains("\r\n\r\n")) // body is not optional so if not found panic
         {
-            io::printfn("Headers:\n%s\n", w.str_view());
-            io::printfn("Headers Length: %d bytes\n", w.str_view().len);
             break;
         };
         io::printfn("Recieved: %d bytes", bytes_received);
     }
 
-    String text = w.str_view();
-    Response! r = {
-        .body=text.split("\r\n\r\n")[1]
-        // TODO write something that parses headers and put them in here 
-        // TODO write something that parses the statuscode and put it in here
-    };
-    return r;
+    String[] data = w.str_view().split("\r\n\r\n");
+    res.body = data[1];
+    
+    String[] message;
+    if((message = data[0].split("\n")) && message.len > 1)
+    {
+        String[] response_status = message[0].split(" ");
+        // TODO: response status can be malformed should 
+        res.protocol = response_status[0];
+        res.code = response_status[1].to_uint()!!;
+        res.status = response_status[2];
+        
+        foreach(h : message[1:message.len-1])
+        {
+            String[] key_value = h.split(":");
+            self.headers.push(
+                {
+                    .key=key_value[0].strip(" ").strip_end(" "), 
+                    .value=key_value[1].strip(" ").strip_end(" ")
+                }
+            );
+        }
+    }
+    return res;
 }
 
 fn Request request(String method, String url)
@@ -92,7 +130,7 @@ fn Request request(String method, String url)
     list::List(<Header>) req_headers;
     req_headers.new_init();
     Request req = {
-        .method = method, 
+        .method=method,
         .url=req_url,
         .headers=req_headers,
     };
