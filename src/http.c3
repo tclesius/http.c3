@@ -2,90 +2,134 @@ module http;
 import url;
 import std::collections::map;
 import std::collections::object;
+import std::collections::list;
 import std::encoding::json;
 import std::net::tcp;
 import std::io;
 
+
+struct Header {
+    String key;
+    String value;
+}
+
 struct Response {
     uint status;
     String body;
-    HashMap(<String, String>) headers;
+    List(<Header>) headers;
 }
 
 fn Object*! Response.json(Response* self)
 {
     return json::parse_string(self.body);
 }
+
 fn String Response.text(Response* self)
 {
     return self.body;
 }
 
-fn Response! request(String method, String url, args...)
+struct Request 
 {
-    Response res;
-    Url! purl = url::parse(url);
+    String method;
+    Url url;
+    List(<Header>) headers;
+}
 
-    if (catch err = purl)
-    {
-        // throw error
-    }
+fn Request Request.header(&self, String key, String value)
+{
+    self.headers.push({.key=key, .value=value});
+    return *self; // TODO: should pass by reference 
+}
 
-    TcpSocket! sock = tcp::connect(purl.host, purl.port,{});
+fn Response! Request.send(&self)
+{
+    TcpSocket! sock = tcp::connect(self.url.host, self.url.port,{});
     defer sock.destroy()!!;
     if (catch err = sock)
 	{
-		io::printfn("Error when trying to connect to host %s", err);
+		io::printfn("Could not connect to host");
 		return err?;
 	}
-    
-    char[] http_request = string::new_format("%s %s HTTP/1.1\r\nHost: %s \r\nConnection: close\r\n\r\n", method, purl.path!!, purl.host!!);
+    // Connection can be keep-alive or close
+    char[] http_request = string::new_format("%s %s HTTP/1.1\r\nHost: %s \r\nConnection: close\r\n\r\n", self.method, self.url.path, self.url.host);
 	usz! bytes_written = sock.write(http_request);
 	if (catch err = bytes_written)
 	{
-		io::printfn("Error when trying to write to socket %s", err);
+		io::printfn("Could not send data to host");
 		return err?;
 	}
 	
- 	char[4096] buffer;
-    usz! bytes_received = sock.read(buffer[:buffer.len]);
-	String text = (String) buffer[:buffer.len];
 
-	res.body = text.split("\r\n\r\n")[1];
-    return res;
+    ByteWriter w;
+    w.new_init();
+    char[4096] buffer;
+    
+    while(try usz bytes_received = sock.read(buffer[:buffer.len]) && bytes_received > 0)
+    {
+        w.write(buffer[:buffer.len])!!;
+        if(((String)buffer[:buffer.len]).contains("\r\n\r\n"))
+        {
+            io::printfn("Headers:\n%s\n", w.str_view());
+            io::printfn("Headers Length: %d bytes\n", w.str_view().len);
+            break;
+        };
+        io::printfn("Recieved: %d bytes", bytes_received);
+    }
+
+    String text = w.str_view();
+    Response! r = {
+        .body=text.split("\r\n\r\n")[1]
+        // TODO write something that parses headers and put them in here 
+        // TODO write something that parses the statuscode and put it in here
+    };
+    return r;
 }
 
-fn Response! get(String url, args...)
+fn Request request(String method, String url)
 {
-    return request("GET", url, ...args);
-} 
-
-fn Response! options(String url, args...)
-{
-    return request("OPTIONS", url, ...args);
+    Url req_url = url::parse(url)!!;
+    list::List(<Header>) req_headers;
+    req_headers.new_init();
+    Request req = {
+        .method = method, 
+        .url=req_url,
+        .headers=req_headers,
+    };
+    return req;
 }
 
-fn Response! head(String url, args...)
+fn Request get(String url)
 {
-    return request("HEAD", url, ...args);
+    return request("GET", url);
+} 
+
+fn Request options(String url)
+{
+    return request("OPTIONS", url);
 }
 
-fn Response! post(String url, args...)
+fn Request head(String url)
 {
-    return request("POST", url, ...args);
+    return request("HEAD", url);
+}
+
+fn Request post(String url)
+{
+    return request("POST", url);
 } 
 
-fn Response! put(String url, args...)
+fn Request put(String url)
 {
-    return request("PUT", url, ...args);
+    return request("PUT", url);
 } 
 
-fn Response! patch(String url, args...)
+fn Request patch(String url)
 {
-    return request("PATCH", url, ...args);
+    return request("PATCH", url);
 } 
 
-fn Response! delete(String url, args...)
+fn Request delete(String url)
 {
-    return request("DELETE", url, ...args);
-} 
+    return request("DELETE", url);
+}
