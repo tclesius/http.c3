@@ -52,8 +52,6 @@ fn Request Request.header(&self, String key, String value)
 
 fn Response Request.send(&self) // exec would be a good name too 
 {
-    self.protocol = "HTTP/1.1";
-
     Response res;
     ByteWriter w;
     w.temp_init();
@@ -79,16 +77,17 @@ fn Response Request.send(&self) // exec would be a good name too
     }
     w.write("\r\n\r\n")!!;
     
-    usz! bytes_written = sock.write(w.str_view());
-	io::printfn("Send: %d bytes", bytes_written!!);
-    io::printfn("%s", w.str_view());
+    if (try usz bytes_written = sock.write(w.str_view())){
+        io::printfn("\nSend: %d bytes\n", bytes_written);
+    };
+    //io::printfn("%s", w.str_view());
     
     w.destroy()!!;
     w.temp_init();
     char[4096] buffer;
     while(try usz bytes_received = sock.read(buffer[:buffer.len]) && bytes_received > 0)
     {
-        io::printfn("Recieved: %d bytes", bytes_received);
+        io::printfn("\nRecieved: %d bytes\n", bytes_received);
         w.write(buffer[:buffer.len])!!;
         if(((String)buffer[:buffer.len]).contains("\r\n\r\n")) // body is not optional so if not found panic
         {
@@ -129,6 +128,7 @@ fn Request request(String method, String url)
     list::List(<Header>) req_headers;
     req_headers.new_init();
     Request req = {
+        .protocol="HTTP/1.1", // TODO: should not be hardcoded ithink
         .method=method,
         .url=req_url,
         .headers=req_headers,
