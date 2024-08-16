@@ -50,7 +50,7 @@ fn Request Request.header(&self, String key, String value)
     return *self; // TODO: should pass by reference 
 }
 
-fn Response Request.send(&self)
+fn Response Request.send(&self) // exec would be a good name too 
 {
     self.protocol = "HTTP/1.1";
 
@@ -79,23 +79,22 @@ fn Response Request.send(&self)
     }
     w.write("\r\n\r\n")!!;
     
+    usz! bytes_written = sock.write(w.str_view());
+	io::printfn("Send: %d bytes", bytes_written!!);
     io::printfn("%s", w.str_view());
     
-    usz! bytes_written = sock.write(w.str_view());
-	
-    //io::printfn("%d %s", bytes_written!!, w.str_view());
-
     w.destroy()!!;
     w.temp_init();
     char[4096] buffer;
     while(try usz bytes_received = sock.read(buffer[:buffer.len]) && bytes_received > 0)
     {
+        io::printfn("Recieved: %d bytes", bytes_received);
         w.write(buffer[:buffer.len])!!;
         if(((String)buffer[:buffer.len]).contains("\r\n\r\n")) // body is not optional so if not found panic
         {
             break;
         };
-        io::printfn("Recieved: %d bytes", bytes_received);
+        
     }
 
     String[] data = w.str_view().split("\r\n\r\n");
@@ -113,7 +112,7 @@ fn Response Request.send(&self)
         foreach(h : message[1:message.len-1])
         {
             String[] key_value = h.split(":");
-            self.headers.push(
+            res.headers.push(
                 {
                     .key=key_value[0].strip(" ").strip_end(" "), 
                     .value=key_value[1].strip(" ").strip_end(" ")

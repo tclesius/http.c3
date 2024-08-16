@@ -21,6 +21,5 @@ fn void main()
 	}
 
 	// Print the body
-	io::printfn("Body:");
-	io::printfn("%s", r.body);
+	io::printfn("Body:\n %s", r.body);
 }
