@@ -4,9 +4,9 @@ import http;
 fn void main()
 {
 	io::printfn("Request:");
-	Request req = http::get("http://jsonip.com")
-		.header("Content-Type", "application/json; charset=utf-8")
-		.header("Authorization", "Bearer token123");
+	Request req = http::get("http://localhost:8000/");
+		//.header("Content-Type", "application/json; charset=utf-8")
+		//.header("Authorization", "Bearer token123");
 	
 	io::printfn(" HTTP Version: %s", req.protocol);
 	io::printfn(" Headers:");
@@ -32,7 +32,12 @@ fn void main()
 	{
 		io::printfn("   %s: %s", header.key, header.value);
 	}
-
-	// Print the body
+	
+	io::printfn(" Cookies:");
+	//foreach(cookie : res.cookies[req.url.host]!!)
+	//{
+	//	io::printfn("   %s", cookie);
+	//}
+	//Print the body
 	io::printfn(" Body:\n  %s", res.body);
 }
