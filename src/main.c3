@@ -3,23 +3,36 @@ import http;
 
 fn void main()
 {
-	Response r = http::get("http://jsonip.com")
-		.header("Content-Type", "application/json")
-		.header("Authorization", "Bearer token123")
-		.send();
-
-	// Print status code, protocol, and status message
-	io::printfn("HTTP Version: %s", r.protocol);
-	io::printfn("Status Code: %d", r.code);
-	io::printfn("Status Message: %s", r.status);
-
-	// Print all headers
-	io::printfn("Headers:");
-	foreach(header : r.headers)
+	io::printfn("Request:");
+	Request req = http::get("http://jsonip.com")
+		.header("Content-Type", "application/json; charset=utf-8")
+		.header("Authorization", "Bearer token123");
+	
+	io::printfn(" HTTP Version: %s", req.protocol);
+	io::printfn(" Headers:");
+	foreach(header : req.headers)
 	{
-		io::printfn("  %s: %s", header.key, header.value);
+		io::printfn("   %s: %s", header.key, header.value);
 	}
 
 	// Print the body
-	io::printfn("Body:\n %s", r.body);
+	//io::printfn(" Body:\n  %s", req.body);	
+
+
+	Response res = req.send();
+	// Print status code, protocol, and status message
+	io::printfn("Response:");
+	io::printfn(" HTTP Version: %s", res.protocol);
+	io::printfn(" Status Code: %d", res.code);
+	io::printfn(" Status Message: %s", res.status);
+
+	// Print all headers
+	io::printfn(" Headers:");
+	foreach(header : res.headers)
+	{
+		io::printfn("   %s: %s", header.key, header.value);
+	}
+
+	// Print the body
+	io::printfn(" Body:\n  %s", res.body);
 }
