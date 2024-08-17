@@ -3,41 +3,41 @@ import http;
 
 fn void main()
 {
-	io::printfn("Request:");
+	//io::printfn("Request:");
 	Request req = http::get("http://localhost:8000/");
 		//.header("Content-Type", "application/json; charset=utf-8")
 		//.header("Authorization", "Bearer token123");
 	
-	io::printfn(" HTTP Version: %s", req.protocol);
-	io::printfn(" Headers:");
-	foreach(header : req.headers)
-	{
-		io::printfn("   %s: %s", header.key, header.value);
-	}
+	//io::printfn(" HTTP Version: %s", req.protocol);
+	//io::printfn(" Headers:");
+	//foreach(header : req.headers)
+	//{
+	//	io::printfn("   %s: %s", header.key, header.value);
+	//}
 
 	// Print the body
 	//io::printfn(" Body:\n  %s", req.body);	
 
 
-	Response res = req.send();
+	req.send();
 	// Print status code, protocol, and status message
-	io::printfn("Response:");
-	io::printfn(" HTTP Version: %s", res.protocol);
-	io::printfn(" Status Code: %d", res.code);
-	io::printfn(" Status Message: %s", res.status);
+	//io::printfn("Response:");
+	//io::printfn(" HTTP Version: %s", res.protocol);
+	//io::printfn(" Status Code: %d", res.code);
+	//io::printfn(" Status Message: %s", res.status);
 
 	// Print all headers
-	io::printfn(" Headers:");
-	foreach(header : res.headers)
-	{
-		io::printfn("   %s: %s", header.key, header.value);
-	}
+	//io::printfn(" Headers:");
+	//foreach(header : res.headers)
+	//{
+	//	io::printfn("   %s: %s", header.key, header.value);
+	//}
 	
-	io::printfn(" Cookies:");
+	//io::printfn(" Cookies:");
 	//foreach(cookie : res.cookies[req.url.host]!!)
 	//{
 	//	io::printfn("   %s", cookie);
 	//}
 	//Print the body
-	io::printfn(" Body:\n  %s", res.body);
+	//io::printfn(" Body:\n  %s", res.body);
 }
