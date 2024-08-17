@@ -56,9 +56,8 @@ struct CookieJar {
 
 fn void CookieJar.set_cookie(&self, Cookie cookie) 
 {
-    cookie.domain = " ";
-    cookie.path = " ";
     DString key;
+    key.new_init();
     key.appendf("%s,%s,%s", cookie.name, cookie.domain, cookie.path);
     self.cookies[key.str_view()] = cookie;
 }
@@ -66,6 +65,7 @@ fn void CookieJar.set_cookie(&self, Cookie cookie)
 fn Cookie! CookieJar.get_cookie(&self, String name , String domain, String path) 
 {
     DString key;
+    key.new_init();
     key.appendf("%s,%s,%s", name, domain, path);
     return self.cookies[key.str_view()];
 }
@@ -82,6 +82,29 @@ fn String Response.text(&self)
     return self.body;
 }
 
+//// Cookie methods
+fn String Cookie.to_string(&self)
+{
+    DString result;
+    result.new_init();
+    result.appendf(
+        "<Cookie %s=%s; Domain=%s; Path=%s; Expires=%s; Max-Age=%s; SameSite=%s; Secure=%b; HttpOnly=%b >",
+        self.name,
+        self.value,
+        self.domain,
+        self.path,
+        self.expires,
+        self.max_age,
+        self.same_site,
+        self.secure,
+        self.http_only
+    );
+    return result.str_view();
+}
+
+////
+
+
 //// Request methods
 
 fn Request Request.header(&self, String key, String value) 
@@ -89,6 +112,7 @@ fn Request Request.header(&self, String key, String value)
     self.headers.push({.key=key, .value=value});
     return *self;
 }
+
 
 fn Cookie parse_set_cookie(String value)
 {
@@ -235,7 +259,7 @@ fn Response Request.send(&self)
 
     usz bytes_written = sock.write(w.str_view())!!;
 
-    recieve_response(sock)!!;
+    res = recieve_response(sock)!!;
     
     //w.destroy()!!;
     //w.temp_init();
