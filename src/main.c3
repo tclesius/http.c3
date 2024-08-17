@@ -4,7 +4,7 @@ import http;
 fn void main()
 {
 	io::printfn("Request:");
-	Request req = http::get("http://localhost:8000/")
+	Request req = http::get("http://localhost:8000//")
 		.header("Content-Type", "application/json; charset=utf-8")
 		.header("Authorization", "Bearer token123");
 	

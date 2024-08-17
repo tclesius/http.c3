@@ -180,7 +180,7 @@ fn Response recieve_response(TcpSocket socket)
         if(ix == 0)
         {
             // parse status line
-            String[] status_line = line.trim().split(" ");
+            String[] status_line = line.trim().split(" ", 3);
             r.protocol = status_line[0];
             r.status_code = status_line[1].to_uint()!!;
             r.status_message = status_line[2];
@@ -188,7 +188,7 @@ fn Response recieve_response(TcpSocket socket)
         else
         {
             // parse headers
-            String[] kv = line.trim().split(":");
+            String[] kv = line.trim().split(":", 2);
             r.headers.push({.key=kv[0], .value=kv[1]});
             
             String lower_key = kv[0].temp_ascii_to_lower();
