@@ -1,6 +1,7 @@
 ## Goals
 - [~] Headers implementieren
-- [ ] Cookies implementieren
+- [~] Cookies implementieren
+- [ ] request body implementieren
 - [ ] Ein paar Tests schreiben
 - [ ] Requests über http proxies implementieren
 - [ ] Request body hinzufuegen (verschiedene encodings)

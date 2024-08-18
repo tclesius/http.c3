@@ -103,32 +103,6 @@ fn String Cookie.to_string(&self)
     return result.str_view();
 }
 
-////
-
-
-//// Request methods
-
-fn Request Request.header(&self, String key, String value) 
-{
-    self.headers.push({.key=key, .value=value});
-    return *self;
-}
-
-fn Request Request.cookie(&self, Cookie cookie)
-{
-    // @TODO if path and domain not set -> request url 
-    self.jar.set_cookie(cookie);
-    return *self;
-}
-
-fn Request Request.body(&self, String body)
-{
-    // @Feature would be nice to serialize a Object* from json module
-    self.body = body;
-    return *self;
-}
-
-
 fn Cookie parse_set_cookie(String value)
 {
     Cookie cookie;
@@ -170,6 +144,7 @@ fn Cookie parse_set_cookie(String value)
 
 fn void recieve_response(TcpSocket socket, Response* res)
 {
+    
     ByteWriter writer; 
     writer = *writer.temp_init();
     char[4096] buffer;
@@ -237,9 +212,10 @@ fn void recieve_response(TcpSocket socket, Response* res)
     // read the remaining body from the socket
     while(try bytes = socket.read(buffer[:buffer.len]) && bytes > 0) 
     {
+        //io::printfn("Remaining %d", remaining);
         writer.write(buffer[:buffer.len])!!;
         remaining -= (uint) bytes;
-        //io::printfn("%d", remaining);
+        
         buffer = {};
         if( remaining < 0 )
         {
@@ -263,7 +239,7 @@ fn void send_request(TcpSocket socket, Request* req)
     // write content-length if body present
     if(req.body.len > 0)
     {
-        data.appendf("Content-Length: %d\r\n", req.body.len);
+        data.appendf("Content-Length: %d", req.body.len);
     }
     // write relevant cookie headers
     foreach(ix, cookie: req.jar.cookies.value_tlist())
@@ -282,71 +258,79 @@ fn void send_request(TcpSocket socket, Request* req)
         }
     }
     data.appendf("\r\n\r\n");
-    // io::printfn(data.str_view());
+    data.appendf(req.body);
+    //io::printfn(data.str_view());
     // @TODO Calculate the content-length and add Header
     // @TODO write the request body
-    usz bytes_written = socket.write(data.str_view())!!; // @TODO should i send in chunks?
+    int last_pos = 0;
+    String buffer = data.str_view();
+    while(try bytes = socket.write(buffer[last_pos:buffer.len]) && bytes > 0) 
+    {
+        last_pos += (uint) bytes;
+        if( last_pos >= req.body.len ){ break; }   
+    }
+    //socket.write_all(data.str_view())!!;
 }
 
-
-fn Response Request.send(&self) 
+fn Response request(String method, String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 {
+    Url req_url = url::parse(url)!!;
     Response res;
-    ByteWriter w;
-    w.temp_init();
+    List(<Header>) headers_;
+    headers_.new_init_with_array(headers);
 
-    TcpSocket! sock = tcp::connect(self.url.host, self.url.port, {});
-    defer sock.destroy()!!;
-
-    //w.write(self.method)!!;
-    //w.write(" ")!!;
-    //w.write(self.url.path)!!;
-    //w.write(" ")!!;
-    //w.write(self.protocol)!!;
-    //w.write("\r\n")!!;
-//
-    //foreach(header: self.headers) 
-    //{
-    //    w.write(header.key.concat(": ").concat(header.value).concat("\r\n"))!!;
-    //}
-//
-    //self.jar.cookies.@each_entry(;map::Entry(<String, Cookie>)* entry) 
-    //{
-    //    // THIS IS WRONG!
-    //    w.write("Cookie : ".concat(entry.value.name).concat("=").concat(entry.value.value).concat("\r\n"))!!;
-    //};
-    //w.write("\r\n")!!;
-//
-    //usz bytes_written = sock.write(w.str_view())!!;
+    headers_.push({.key="Connection", .value="keep-alive"});
+    headers_.push({.key="Host", .value=req_url.host});
     
-    send_request(sock, self)!!;
+    CookieJar jar;
+    foreach(cookie: cookies)
+    {
+        jar.set_cookie(cookie);
+    }
+    
+    Request req = {
+        .protocol="HTTP/1.1",
+        .method=method,
+        .url=req_url,
+        .headers=headers_,
+        .body=body,
+        .jar=jar
+    };
+
+    TcpSocket! sock = tcp::connect(req.url.host, req.url.port, {});
+    defer sock.destroy()!!;
+    
+    send_request(sock, &req)!!;
     recieve_response(sock, &res)!!;
     
     return res;
 }
 
-fn Request request(String method, String url) 
-{
-    Url req_url = url::parse(url)!!;
-    list::List(<Header>) headers;
-    headers.new_init();
-
-    headers.push({.key="Connection", .value="keep-alive"});
-    headers.push({.key="Host", .value=req_url.host});
-
-    Request req = {
-        .protocol="HTTP/1.1",
-        .method=method,
-        .url=req_url,
-        .headers=headers,
-    };
-    return req;
+fn Response get(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
+{ 
+    return request("GET", url, cookies, headers, body); 
 }
-
-fn Request get(String url) { return request("GET", url); }
-fn Request options(String url) { return request("OPTIONS", url); }
-fn Request head(String url) { return request("HEAD", url); }
-fn Request post(String url) { return request("POST", url); }
-fn Request put(String url) { return request("PUT", url); }
-fn Request patch(String url) { return request("PATCH", url); }
-fn Request delete(String url) { return request("DELETE", url); }
+fn Response options(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
+{ 
+    return request("OPTIONS", url, cookies, headers, body); 
+}
+fn Response head(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
+{ 
+    return request("HEAD", url, cookies, headers, body); 
+}
+fn Response post(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
+{ 
+    return request("POST", url, cookies, headers, body); 
+}
+fn Response put(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
+{ 
+    return request("PUT", url, cookies, headers, body); 
+}
+fn Response patch(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
+{ 
+    return request("PATCH", url, cookies, headers, body); 
+}
+fn Response delete(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
+{ 
+    return request("DELETE", url, cookies, headers, body); 
+}

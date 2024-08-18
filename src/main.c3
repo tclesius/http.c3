@@ -3,31 +3,34 @@ import http;
 
 fn void main()
 {
-	io::printfn("\nRequest:");
-
-	Request req = http::get("http://localhost:8000/")
-		.header("Content-Type", "application/json; charset=utf-8")
-		.header("Authorization", "Bearer token123")
-		.cookie({.name="secret", .value="abcdefg", .path="/", .domain="localhost"})
-		.cookie({.name="secret2", .value="abcdefgh", .path="/", .domain="localhost"});
+	// io::printfn("\nRequest:");
+	Response res = http::get(
+						.url="http://localhost:8000/json",
+						.headers={
+							{"Content-Type", "application/json; charset=utf-8"},
+							{"Authorization", "Bearer token123"}
+						},
+						.cookies={
+							{.name="secret", .value="abcdefg", .path="/", .domain="localhost"},
+							{.name="secret2", .value="abcdefgh", .path="/", .domain="localhost"}
+						},
+						.body="{\"hello\":\"world\"}"
+					);
 	
-	io::printfn(" HTTP Version: %s", req.protocol);
-	io::printfn(" Headers:");
-	foreach(header : req.headers)
-	{
-		io::printfn("   %s: %s", header.key, header.value);
-	}
-	io::printfn(" Cookies:");
-	foreach(cookie : req.jar.cookies.value_tlist())
-	{
-		io::printfn("   %s", cookie.to_string());
-	}
+	//io::printfn(" HTTP Version: %s", req.protocol);
+	//io::printfn(" Headers:");
+	//foreach(header : req.headers)
+	//{
+	//	io::printfn("   %s: %s", header.key, header.value);
+	//}
+	//io::printfn(" Cookies:");
+	//foreach(cookie : req.jar.cookies.value_tlist())
+	//{
+	//	io::printfn("   %s", cookie.to_string());
+	//}
 
 	// Print the body
 	//io::printfn(" Body:\n  %s", req.body);	
-
-
-	Response res = req.send();
 	// Print status code, protocol, and status message
 	io::printfn("\nResponse:");
 	io::printfn(" HTTP Version: %s", res.protocol);
