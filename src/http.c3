@@ -30,6 +30,7 @@ struct Request
     String protocol;
     String method;
     Url url;
+    String body;
     List(<Header>) headers;
 }
 
@@ -113,6 +114,20 @@ fn Request Request.header(&self, String key, String value)
     return *self;
 }
 
+fn Request Request.cookie(&self, Cookie cookie)
+{
+    // @TODO if path and domain not set -> request url 
+    self.jar.set_cookie(cookie);
+    return *self;
+}
+
+fn Request Request.body(&self, String body)
+{
+    // @Feature would be nice to serialize a Object* from json module
+    self.body = body;
+    return *self;
+}
+
 
 fn Cookie parse_set_cookie(String value)
 {
@@ -153,13 +168,13 @@ fn Cookie parse_set_cookie(String value)
     return cookie;
 }
 
-fn Response recieve_response(TcpSocket socket)
+fn void recieve_response(TcpSocket socket, Response* res)
 {
-    Response r;
     ByteWriter writer; 
     writer = *writer.temp_init();
-
     char[4096] buffer;
+    
+    // read header and maybe part of body from the socket
     while(try bytes = socket.read(buffer[:buffer.len]) && bytes > 0) 
     {
         writer.write(buffer[:buffer.len])!!;
@@ -181,27 +196,27 @@ fn Response recieve_response(TcpSocket socket)
         {
             // parse status line
             String[] status_line = line.trim().split(" ", 3);
-            r.protocol = status_line[0];
-            r.status_code = status_line[1].to_uint()!!;
-            r.status_message = status_line[2];
+            res.protocol = status_line[0];
+            res.status_code = status_line[1].to_uint()!!;
+            res.status_message = status_line[2];
         }   
         else
         {
             // parse headers
             String[] kv = line.trim().split(":", 2);
-            r.headers.push({.key=kv[0], .value=kv[1]});
+            res.headers.push({.key=kv[0], .value=kv[1]});
             
             String lower_key = kv[0].temp_ascii_to_lower();
-            // if content-length header - save value
             
+            // if content-length header - save value
             if ("content-length" == lower_key)
             {
                 content_length = kv[1].to_uint()!!;
             }
             else if("set-cookie" == lower_key)
             {
-                Cookie cookie = parse_set_cookie(kv[1]); 
-                r.jar.set_cookie(cookie);
+                Cookie cookie = parse_set_cookie(kv[1]); // TODO: domain and path has default if missing!
+                res.jar.set_cookie(cookie);
             }
         }
     }
@@ -215,11 +230,11 @@ fn Response recieve_response(TcpSocket socket)
     
     if( remaining < 0 )
     {
-        r.body = body;
-        return r;
+        res.body = body;
+        return;
     }
-
-    // Read the remaining data from the socket
+    // TODO: @optimization: just read remaining bytes not static 4096 bytes
+    // read the remaining body from the socket
     while(try bytes = socket.read(buffer[:buffer.len]) && bytes > 0) 
     {
         writer.write(buffer[:buffer.len])!!;
@@ -228,11 +243,49 @@ fn Response recieve_response(TcpSocket socket)
         buffer = {};
         if( remaining < 0 )
         {
-            r.body = body;
-            return r;
+            res.body = body;
+            return;
         }   
     }
-    return r;
+}
+
+fn void send_request(TcpSocket socket, Request* req)
+{
+    DString data;
+    data.temp_init();
+    // write request line
+    data.appendf("%s %s %s\r\n", req.method, req.url.path, req.protocol);
+    // write request headers
+    foreach(header: req.headers)
+    {
+        data.appendf("%s: %s\r\n", header.key, header.value);
+    }
+    // write content-length if body present
+    if(req.body.len > 0)
+    {
+        data.appendf("Content-Length: %d\r\n", req.body.len);
+    }
+    // write relevant cookie headers
+    foreach(ix, cookie: req.jar.cookies.value_tlist())
+    {   
+        if (cookie.domain == req.url.host && cookie.path == req.url.path) // @TODO domain != host
+        {
+            if(ix == 0)
+            {
+                data.appendf("Cookie: ");
+            } 
+            else
+            {
+                data.appendf("; ");
+            }
+            data.appendf("%s=%s", cookie.name, cookie.value);
+        }
+    }
+    data.appendf("\r\n\r\n");
+    // io::printfn(data.str_view());
+    // @TODO Calculate the content-length and add Header
+    // @TODO write the request body
+    usz bytes_written = socket.write(data.str_view())!!; // @TODO should i send in chunks?
 }
 
 
@@ -245,87 +298,30 @@ fn Response Request.send(&self)
     TcpSocket! sock = tcp::connect(self.url.host, self.url.port, {});
     defer sock.destroy()!!;
 
-    w.write(self.method)!!;
-    w.write(" ")!!;
-    w.write(self.url.path)!!;
-    w.write(" ")!!;
-    w.write(self.protocol)!!;
-    w.write("\r\n")!!;
-
-    foreach(header: self.headers) {
-        w.write(header.key.concat(": ").concat(header.value).concat("\r\n"))!!;
-    }
-    w.write("\r\n")!!;
-
-    usz bytes_written = sock.write(w.str_view())!!;
-
-    res = recieve_response(sock)!!;
+    //w.write(self.method)!!;
+    //w.write(" ")!!;
+    //w.write(self.url.path)!!;
+    //w.write(" ")!!;
+    //w.write(self.protocol)!!;
+    //w.write("\r\n")!!;
+//
+    //foreach(header: self.headers) 
+    //{
+    //    w.write(header.key.concat(": ").concat(header.value).concat("\r\n"))!!;
+    //}
+//
+    //self.jar.cookies.@each_entry(;map::Entry(<String, Cookie>)* entry) 
+    //{
+    //    // THIS IS WRONG!
+    //    w.write("Cookie : ".concat(entry.value.name).concat("=").concat(entry.value.value).concat("\r\n"))!!;
+    //};
+    //w.write("\r\n")!!;
+//
+    //usz bytes_written = sock.write(w.str_view())!!;
     
-    //w.destroy()!!;
-    //w.temp_init();
-    //char[4096] buffer;
-    //while(try usz bytes_received = sock.read(buffer[:buffer.len]) && bytes_received > 0) {
-    //    io::printfn("\nReceived: %d bytes", bytes_received);
-    //    w.write(buffer[:bytes_received])!!;
-    //    if(((String)buffer[:bytes_received]).contains("\r\n\r\n")) {
-    //        break;
-    //    }
-    //}
-    //io::printfn("revieved: \n");
-    //io::printfn(w.str_view());
-//
-    //if(w.str_view().contains("\r\n\r\n")){
-//
-    //}
-
-
-
-
-    //String[] data = w.str_view().split("\r\n\r\n");
-    //res.body = data[1];
-//
-    //String[] message = data[0].split("\r\n");
-    //
-    //
-    //    String[] response_status = message[0].split(" ");
-    //    res.protocol = response_status[0];
-    //    res.code = response_status[1].to_uint()!!;
-    //    res.status = response_status[2];
-//
-    //    for(i in 1..<message.len) {
-    //        String[] header = message[i].split(":");
-    //        String key = header[0].strip(" ");
-    //        String value = header[1].strip(" ");
-    //        res.headers.push({.key=key, .value=value});
-//
-    //        if (key.to_lower() == "set-cookie") {
-    //            String[] cookie_data = value.split(";");
-    //            String[] name_value = cookie_data[0].strip(" ").split("=");
-    //            Cookie cookie = {
-    //                .name = name_value[0],
-    //                .value = name_value[1]
-    //            };
-//
-    //            for(j in 1..<cookie_data.len) {
-    //                String[] attr = cookie_data[j].strip(" ").split("=");
-    //                if (attr[0] == "Domain") {
-    //                    cookie.domain = attr[1];
-    //                } else if (attr[0] == "Path") {
-    //                    cookie.path = attr[1];
-    //                } else if (attr[0] == "Expires") {
-    //                    cookie.expires = attr[1];
-    //                } else if (attr[0] == "Secure") {
-    //                    cookie.secure = true;
-    //                } else if (attr[0] == "HttpOnly") {
-    //                    cookie.http_only = true;
-    //                }
-    //            }
-//
-    //            self.cookies.add(cookie);
-    //        }
-    //    }
-    //}
-
+    send_request(sock, self)!!;
+    recieve_response(sock, &res)!!;
+    
     return res;
 }
 
