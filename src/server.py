@@ -7,10 +7,10 @@ app = FastAPI()
 
 async def fake_data_generator():
     """Simulate generating data in chunks."""
-    for i in range(10):
+    for i in range(9):
         # Simulate a delay to represent data generation time
-        await asyncio.sleep(1)
-        yield f"Chunk {i + 1}\n"
+        await asyncio.sleep(0.2)
+        yield f"Chunk {i + 1}"
 
 
 @app.get("/stream")

@@ -1,26 +1,25 @@
 ## Goals
+- [x] Response Body json method / lambda 
 - [~] Headers implementieren
 - [~] Cookies implementieren
 - [~] Request body hinzufuegen (verschiedene encodings)
-- [ ] Chunked Transfer Encoding unterstuetzen -> Streams, Downloads, ...
-- [ ] Redirects unterstützen
-- [ ] Timeouts implementieren
-- [ ] Response Body json method / lambda 
-- [ ] Tests schreiben
+- [~] Transfer Encoding Chunked empfangen unterstuetzen
+- [ ] Transfer Encoding Chunked senden unterstuetzen
+- [ ] POST urlencoded data
 - [ ] Requests über http proxies implementieren
+- [ ] Redirects unterstützen (allow_redirects) / History -> List(Response) aufbauen
+- [ ] Socket Timeout einbauen
+- [ ] Tests schreiben
 - [ ] Sessions implementieren siehe: https://docs.python-requests.org/en/latest/user/advanced/
-- [ ] request should also accept Request struct in some way to send
-
+- [ ] Requests einzeln bauen und diese dann senden vielleicht einbauen
  
 ## Goals Advanced
 - [ ] Websockets implementieren
-- [ ] HTTP/1.1 unterstuetzen
-- [ ] support gzip decoding
+- [ ] Transfer Encoding gzip empfangen unterstuetzen
+- [ ] Transfer Encoding gzip senden unterstuetzen
 
 
 ## Quick wins
-- [ ] curl -v jsonip.com debug messages
-- [ ] User-Agent: c3c/http in request header hinzufuegen
-- [ ] Accept header hinzufuegen?
-- [ ] Rename Status code and Status message 
-- [ ] Schlafenszeit wecker
+- [x] curl -v jsonip.com debug messages
+- [x] User-Agent: c3c/http in request header hinzufuegen
+- [z] Rename Status code and Status message 

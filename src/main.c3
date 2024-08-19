@@ -3,11 +3,10 @@ import http;
 
 fn void main()
 {
-	io::printfn("\nRequest:");
 	Response res = http::get(
-						.url="http://localhost:8000/",
+						.url="http://localhost:8000/docs",
 						.headers={
-							//{"Content-Type", "application/json; charset=utf-8"},
+							{"Content-Type", "application/json; charset=utf-8"},
 							{"Authorization", "Bearer token123"},
 							//{"Transfer-Encoding", "chunked"}
 						},
@@ -15,16 +14,9 @@ fn void main()
 							{.name="secret", .value="abcdefg", .path="/", .domain="localhost"},
 							{.name="secret2", .value="abcdefgh", .path="/", .domain="localhost"}
 						},
-						//.body="{\"hello\":\"world\"}",
-						.stream=true
+						.body="{\"hello\":\"world\"}",
+						//.stream=true
 					);
-	
-	while(res.stream_iter.has_next())
-	{
-		io::printfn(res.stream_iter.next(.chunk_size=6));
-	}
-
-
 	//io::printfn(" HTTP Version: %s", req.protocol);
 	//io::printfn(" Headers:");
 	//foreach(header : req.headers)
@@ -52,12 +44,23 @@ fn void main()
 		io::printfn("   %s: %s", header.key, header.value);
 	}
 	
-	io::printfn(" Cookies:");
-	foreach(cookie : res.jar.cookies.value_tlist())
+	
+	foreach(ix, cookie : res.jar.cookies.value_tlist())
 	{
+		if (ix == 0)
+		{
+			io::printfn(" Cookies:");
+		}
 		io::printfn("   %s", cookie.to_string());
 	}
+	
+	while(try chunk = res.content_iter.next(7))
+	{
+		io::printfn("   %s", chunk);
+	}
 	//Print the body
-	io::printfn(" Body:\n  %s", res.body);
+	io::printfn(" Body:\n  %s", res.text());
+	
 	//res.json()!!;
+
 }

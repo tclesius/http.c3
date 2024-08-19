@@ -8,8 +8,8 @@ import std::net::tcp;
 import std::io;
 import std::time::datetime;
 
-// TODO: Streamiterator error if stream=false and tried to use
 
+// @TODO: Streamiterator error if Iterator exhaused
 struct Header 
 {
     String key;
@@ -18,15 +18,14 @@ struct Header
 
 struct Response 
 {
-    StreamIterator stream_iter;
+    ContentIterator content_iter;
     CookieJar jar;
-    // if stream = false: (default) load head and body
-    // if stream = true: load only head rest gets loaded with iterator
-    bool stream; // do i want to only load the head and load the rest lazy with iterator
+    bool stream; 
+    bool stream_end; // TODO: maybe add stream_end to know if stream_iterator now only iterates over loaded body
     String protocol;
     uint status_code;
     String status_message;
-    String body;
+    // DString body;
     List(<Header>) headers;
 }
 
@@ -61,23 +60,22 @@ struct CookieJar
 }
 
 
-struct StreamIterator 
+struct ContentIterator 
 {
-    TcpSocket* socket;
+    TcpSocket* socket; // i dont like that this is in here
     bool chunked; // is Transfer-Encoding: chunked
     bool chunked_end; // reached end of Transfer-Encoding: chunked
-    uint content_length; // if not chunked this is content-length - read if chunked its the next chunksize
-    int remaining;
+    uint content_length;
+    int content_remaining;
     DString buffer;
+    DString body;
 }
-
-fn bool StreamIterator.has_next(&self)
+ 
+fn String! ContentIterator.next(&self, uint chunk_size = 1024)
 {
-    return self.chunked || self.remaining > 0;
-}
-
-fn String StreamIterator.next(&self, uint chunk_size = 1024)
-{
+    if ((self.chunked && self.chunked_end) || (!self.chunked && self.content_remaining <= 0)){
+        return IteratorResult.NO_MORE_ELEMENT?;
+    }
     
     if(self.chunked)
     {
@@ -123,23 +121,31 @@ fn String StreamIterator.next(&self, uint chunk_size = 1024)
     else 
     {
         // Non-chunked mode: read up to content-length
-        while(self.buffer.len() < chunk_size && self.remaining > 0)
+        while(self.buffer.len() < chunk_size && self.content_remaining > 0)
         {
-            char[] chunk = mem::new_array(char, min(chunk_size, self.remaining));
+            char[] chunk = mem::new_array(char, min(chunk_size, self.content_remaining));
             usz bytes_read = self.socket.read(chunk[:chunk.len])!!;
             self.buffer.append_chars((String) chunk[:chunk.len]);
-            self.remaining -= (uint) bytes_read; 
+            self.content_remaining -= (uint) bytes_read; 
             free(chunk);
             if (bytes_read == 0) {
                 break;  // EOF
             }
         }
     }
-    //io::printfn(self.buffer.str_view());
-    
-    // @Thinkabout: last is probably not chunk size do we need to fill it with whitespace then?;
+
     String result = self.buffer.str_view()[0:min(chunk_size, self.buffer.len())];
-    self.buffer.delete_range(0, result.len - 1);
+    self.body.append(result);
+    if (!self.chunked_end)
+    {
+        self.buffer.delete_range(0, result.len - 1);
+    }
+    else
+    {
+        // some cleanup
+        self.socket.close()!!;
+        self.buffer.clear();
+    }
     return result;
 }
 
@@ -205,22 +211,17 @@ fn void Response.recieve(&self, TcpSocket* socket)
 
     // initialize the stream iterator
     // @TODO make a new constructor for stream_iter
-    self.stream_iter = {
+    self.content_iter = {
         .socket=socket,
         .chunked=chunked,
         .content_length=content_length,
-        .remaining=content_length
+        .content_remaining=content_length,
     };
+
     if (!self.stream)
     {
-        
-        while(self.stream_iter.has_next())
-        {
-            body.append_chars(self.stream_iter.next());
-        }
-        self.body = body.str_view();
+        while(try chunk = self.content_iter.next()) { }
         socket.close()!!; // @TODO: this is not the right place to close the socket
-        return;
     }
 }
 
@@ -306,12 +307,12 @@ fn Response request(String method, String url, Cookie[] cookies = {}, Header[] h
 
 fn Object*! Response.json(&self) 
 {
-    return json::parse_string(self.body);
+    return json::parse_string(self.text());
 }
 
 fn String Response.text(&self) 
 {
-    return self.body;
+    return self.content_iter.body.str_view();
 }
 
 fn Response get(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "", bool stream = false) 
