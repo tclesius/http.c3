@@ -3,7 +3,7 @@ import http;
 
 fn void main()
 {
-	// io::printfn("\nRequest:");
+	io::printfn("\nRequest:");
 	Response res = http::get(
 						.url="http://localhost:8000/",
 						.headers={
@@ -16,10 +16,13 @@ fn void main()
 							{.name="secret2", .value="abcdefgh", .path="/", .domain="localhost"}
 						},
 						//.body="{\"hello\":\"world\"}",
-						//.stream=true
+						.stream=true
 					);
 	
-	// foreach(chunk: res.stream()){}
+	while(res.stream_iter.has_next())
+	{
+		io::printfn(res.stream_iter.next(.chunk_size=6));
+	}
 
 
 	//io::printfn(" HTTP Version: %s", req.protocol);

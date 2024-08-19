@@ -8,6 +8,8 @@ import std::net::tcp;
 import std::io;
 import std::time::datetime;
 
+// TODO: Streamiterator error if stream=false and tried to use
+
 struct Header 
 {
     String key;
@@ -16,7 +18,7 @@ struct Header
 
 struct Response 
 {
-    ContentIterator content_iter;
+    StreamIterator stream_iter;
     CookieJar jar;
     // if stream = false: (default) load head and body
     // if stream = true: load only head rest gets loaded with iterator
@@ -59,63 +61,112 @@ struct CookieJar
 }
 
 
-struct ContentIterator 
+struct StreamIterator 
 {
     TcpSocket* socket;
-    bool chunked; // is the encoding from server chunked
-    // bool stream; // load data lazily on every next call or not
-    int remaining; // if not chunked this is content-length - read if chunked its the next chunksize
-    bool init; // flag if it has run 
+    bool chunked; // is Transfer-Encoding: chunked
+    bool chunked_end; // reached end of Transfer-Encoding: chunked
+    uint content_length; // if not chunked this is content-length - read if chunked its the next chunksize
+    int remaining;
+    DString buffer;
 }
 
-fn bool ContentIterator.has_next(&self)
+fn bool StreamIterator.has_next(&self)
 {
-    return (!self.init && self.chunked) || self.remaining > 0;
+    return self.chunked || self.remaining > 0;
 }
 
-fn char[] ContentIterator.next(&self)
+fn String StreamIterator.next(&self, uint chunk_size = 1024)
 {
-    char[1024] buffer;
-    //if not chunk encoded then read only one 1024 byte chunk
-    if(!self.chunked)
+    
+    if(self.chunked)
     {
-        if (try bytes = self.socket.read(buffer[:buffer.len]) && bytes > 0)
+        // Decode chunked transfer encoding
+        while(self.buffer.len() < chunk_size)
         {
-            self.remaining -= (uint) bytes;
+            DString hex_len;
+            hex_len.temp_init();
+
+            // Read chunk size line (in hex) until \r\n
+            while(try byte = self.socket.read_byte()) 
+            {
+                hex_len.append_char(byte);
+                // read data from the socket until "\r\n" marker is encountered.
+                if (hex_len.str_view().ends_with("\r\n")){    
+                    break; 
+                }
+            }
+            // remove \r\n
+            hex_len.chop(hex_len.len() - 2);
+            
+            // Convert the hex length to a uint
+            uint chunk_len = hex_len.str_view().to_uint(.base=16)!!;
+            
+            if (chunk_len == 0) {
+                // Final chunk (size 0) indicates the end of the stream
+                self.chunked_end = true;
+                break;
+            }
+
+            
+            // Read the actual chunk data
+            char[] chunk = mem::new_array(char, chunk_len);
+            usz bytes_read = self.socket.read(chunk[:chunk_len])!!;
+            self.buffer.append_chars((String) chunk[:bytes_read]);
+            free(chunk);
+            
+            // Read and discard the trailing \r\n after each chunk
+            char[2] crlf;
+            self.socket.read(crlf[:2])!!;
+        }
+    } 
+    else 
+    {
+        // Non-chunked mode: read up to content-length
+        while(self.buffer.len() < chunk_size && self.remaining > 0)
+        {
+            char[] chunk = mem::new_array(char, min(chunk_size, self.remaining));
+            usz bytes_read = self.socket.read(chunk[:chunk.len])!!;
+            self.buffer.append_chars((String) chunk[:chunk.len]);
+            self.remaining -= (uint) bytes_read; 
+            free(chunk);
+            if (bytes_read == 0) {
+                break;  // EOF
+            }
         }
     }
-
-    return buffer[:buffer.len];
+    //io::printfn(self.buffer.str_view());
+    
+    // @Thinkabout: last is probably not chunk size do we need to fill it with whitespace then?;
+    String result = self.buffer.str_view()[0:min(chunk_size, self.buffer.len())];
+    self.buffer.delete_range(0, result.len - 1);
+    return result;
 }
-
 
 //// Response methods
 
 fn void Response.recieve(&self, TcpSocket* socket)
 {
-    
-    ByteWriter writer; 
-    writer = *writer.temp_init();
-    char[4096] buffer;
-    
-    // read header and maybe part of body from the socket
-    while(try bytes = socket.read(buffer[:buffer.len]) && bytes > 0) 
+    DString header;
+    header.temp_init();
+    DString body;
+    body.temp_init();
+    // read header from the socket
+    while(try byte = socket.read_byte()) 
     {
-        writer.write(buffer[:buffer.len])!!;
-        buffer = {}; // clear the temporary buffer
+        header.append_char(byte);
         // Read data from the socket until "\r\n\r\n" marker is encountered.
-        if (writer.str_view().contains("\r\n\r\n")){ break; }
+        if (header.str_view().ends_with("\r\n\r\n")){    
+            break; 
+        }
     }
-
-    String[] data = writer.str_view().split("\r\n\r\n");
     
-    // parse status line and headers
-    String header = data[0];
-    String body = data[1];
+    header.chop(header.len() - 4); // remove last \r\n\r\n
     uint content_length = 0;
     bool chunked = false;
     
-    foreach(ix, line: header.split("\r\n"))
+    // parse status line and headers
+    foreach(ix, line: header.str_view().split("\r\n"))
     {
         if(ix == 0)
         {
@@ -151,23 +202,24 @@ fn void Response.recieve(&self, TcpSocket* socket)
             }
         }
     }
-    // calculate the remaining data to be send (used if not chunked)
-    int remaining = content_length - body.len;
-    // initialize the content iterator
-    self.content_iter = {
+
+    // initialize the stream iterator
+    // @TODO make a new constructor for stream_iter
+    self.stream_iter = {
         .socket=socket,
         .chunked=chunked,
-        .remaining=chunked ? remaining : 0
+        .content_length=content_length,
+        .remaining=content_length
     };
-
     if (!self.stream)
     {
-        while(self.content_iter.has_next())
-        {
-            writer.write(self.content_iter.next())!!;
-        }
         
-        self.body = writer.str_view()[header.len:header.len + content_length];
+        while(self.stream_iter.has_next())
+        {
+            body.append_chars(self.stream_iter.next());
+        }
+        self.body = body.str_view();
+        socket.close()!!; // @TODO: this is not the right place to close the socket
         return;
     }
 }
@@ -244,10 +296,8 @@ fn Response request(String method, String url, Cookie[] cookies = {}, Header[] h
         .body=body,
         .jar=jar,
     };
-
     TcpSocket! sock = tcp::connect(req.url.host, req.url.port, {});
-    defer sock.destroy()!!;
-    
+
     req.send(&sock)!!;
     res.recieve(&sock)!!;
     
