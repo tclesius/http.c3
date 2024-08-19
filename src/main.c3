@@ -5,18 +5,23 @@ fn void main()
 {
 	// io::printfn("\nRequest:");
 	Response res = http::get(
-						.url="http://localhost:8000/json",
+						.url="http://localhost:8000/",
 						.headers={
-							{"Content-Type", "application/json; charset=utf-8"},
-							{"Authorization", "Bearer token123"}
+							//{"Content-Type", "application/json; charset=utf-8"},
+							{"Authorization", "Bearer token123"},
+							//{"Transfer-Encoding", "chunked"}
 						},
 						.cookies={
 							{.name="secret", .value="abcdefg", .path="/", .domain="localhost"},
 							{.name="secret2", .value="abcdefgh", .path="/", .domain="localhost"}
 						},
-						.body="{\"hello\":\"world\"}"
+						//.body="{\"hello\":\"world\"}",
+						//.stream=true
 					);
 	
+	// foreach(chunk: res.stream()){}
+
+
 	//io::printfn(" HTTP Version: %s", req.protocol);
 	//io::printfn(" Headers:");
 	//foreach(header : req.headers)

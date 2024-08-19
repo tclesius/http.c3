@@ -1,23 +1,20 @@
 ## Goals
 - [~] Headers implementieren
 - [~] Cookies implementieren
-- [ ] request body implementieren
-- [ ] Ein paar Tests schreiben
+- [~] Request body hinzufuegen (verschiedene encodings)
+- [ ] Chunked Transfer Encoding unterstuetzen -> Streams, Downloads, ...
+- [ ] Redirects unterstützen
+- [ ] Timeouts implementieren
+- [ ] Response Body json method / lambda 
+- [ ] Tests schreiben
 - [ ] Requests über http proxies implementieren
-- [ ] Request body hinzufuegen (verschiedene encodings)
 - [ ] Sessions implementieren siehe: https://docs.python-requests.org/en/latest/user/advanced/
-- [ ] Streams, Downloads, ... unterstuetzen
-- [ ] Chunked Transfer Encoding unterstuetzen
-- [ ] The Headers should be updateable so that all header with that key get set to the new value 
-- [ ] Requests should have a timeout
+- [ ] request should also accept Request struct in some way to send
+
  
 ## Goals Advanced
-- [ ] SSL implementieren
-- [ ] Requests über https proxies implementieren
 - [ ] Websockets implementieren
-- [ ] HTTP/1.2 unterstuetzen
-- [ ] HTTP/2 unterstuetzen
-- [ ] HTTP/3 unterstuetzen
+- [ ] HTTP/1.1 unterstuetzen
 - [ ] support gzip decoding
 
 
