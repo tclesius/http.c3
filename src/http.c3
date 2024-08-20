@@ -221,7 +221,6 @@ fn void Response.recieve(&self, TcpSocket* socket)
     if (!self.stream)
     {
         while(try chunk = self.content_iter.next()) { }
-        socket.close()!!; // @TODO: this is not the right place to close the socket
     }
 }
 

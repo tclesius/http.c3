@@ -89,3 +89,85 @@ fn Url! parse(String url)
 
     return result;
 }
+
+
+fn String quote(String data)
+{
+    DString encoded;
+    foreach(c : data)
+    {
+        if(c.is_alnum() || @ok("-_.~".index_of_char(c)))
+        {
+            encoded.append(c);
+        }
+        else
+        {
+            encoded.appendf("%%%02X", (uint) c);
+        }
+    }
+    return encoded.str_view();
+}
+
+fn String unquote(String data)
+{
+    DString decoded;
+    for(int ix = 0; ix < data.len; ix++)
+    {
+        char c = data[ix];
+        if(c == '%' && ix + 2 < data.len)
+        {
+            io::printn(data[ix+1:2]);
+            decoded.append((char) data[ix+1:ix+3].to_uint(.base=16)!!);
+            ix += 2;
+        }
+        else
+        {
+            decoded.append(c);
+        }
+    }
+    return decoded.str_view();
+}
+
+fn String quote_plus(String data)
+{
+    DString encoded;
+    foreach(c : data)
+    {
+        if(c.is_alnum() || @ok("-_.~".index_of_char(c)))
+        {
+            encoded.append(c);
+        }
+        else if (c == ' ')
+        {
+            encoded.append('+');
+        }
+        else
+        {
+            encoded.appendf("%%%02X", (uint) c);
+        }
+    }
+    return encoded.str_view();
+}
+
+fn String unquote_plus(String data)
+{
+    DString decoded;
+    for(int ix = 0; ix < data.len; ix++)
+    {
+        char c = data[ix];
+        if(c == '%' && ix + 2 < data.len)
+        {
+            decoded.append((char) data[ix+1:ix+3].to_uint(.base=16)!!);
+            ix += 2;
+        }
+        else if (c == '+')
+        {
+            decoded.append(' ');
+        }
+        else
+        {
+            decoded.append(c);
+        }
+    }
+    return decoded.str_view();
+}
