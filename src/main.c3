@@ -4,20 +4,20 @@ import url;
 
 fn void main()
 {
-	//Response res = http::get(
-	//					.url="http://localhost:8000/docs",
-	//					.headers={
-	//						{"Content-Type", "application/json; charset=utf-8"},
-	//						{"Authorization", "Bearer token123"},
-	//						//{"Transfer-Encoding", "chunked"}
-	//					},
-	//					.cookies={
-	//						{.name="secret", .value="abcdefg", .path="/", .domain="localhost"},
-	//						{.name="secret2", .value="abcdefgh", .path="/", .domain="localhost"}
-	//					},
-	//					.body="{\"hello\":\"world\"}",
-	//					//.stream=true
-	//				);
+	Response res = http::get(
+						.url="http://localhost:8000/stream",
+						.headers={
+							{"Content-Type", "application/json; charset=utf-8"},
+							{"Authorization", "Bearer token123"},
+							//{"Transfer-Encoding", "chunked"}
+						},
+						.cookies={
+							{.name="secret", .value="abcdefg", .path="/", .domain="localhost"},
+							{.name="secret2", .value="abcdefgh", .path="/", .domain="localhost"}
+						},
+						.body="{\"hello\":\"world\"}",
+						.stream=true
+					);
 	//io::printfn(" HTTP Version: %s", req.protocol);
 	//io::printfn(" Headers:");
 	//foreach(header : req.headers)
@@ -64,6 +64,6 @@ fn void main()
 	
 	//res.json()!!;
 
-	io::printn(url::unquote(url::quote("Hello World!")));
+	io::printn(url::unquote_plus(url::quote_plus("Hello World!")));
 
 }

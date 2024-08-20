@@ -116,8 +116,7 @@ fn String unquote(String data)
         char c = data[ix];
         if(c == '%' && ix + 2 < data.len)
         {
-            io::printn(data[ix+1:2]);
-            decoded.append((char) data[ix+1:ix+3].to_uint(.base=16)!!);
+            decoded.append((char) data[ix+1:2].to_uint(.base=16)!!);
             ix += 2;
         }
         else
@@ -157,7 +156,7 @@ fn String unquote_plus(String data)
         char c = data[ix];
         if(c == '%' && ix + 2 < data.len)
         {
-            decoded.append((char) data[ix+1:ix+3].to_uint(.base=16)!!);
+            decoded.append((char) data[ix+1:2].to_uint(.base=16)!!);
             ix += 2;
         }
         else if (c == '+')
