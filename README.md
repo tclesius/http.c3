@@ -8,6 +8,8 @@
 - [ ] Redirects unterstützen (allow_redirects) / History -> List(Response) aufbauen
 - [ ] Requests über http proxies implementieren
 - [ ] POST urlencoded data
+- [ ] Parameter: params key value werden urlencoded als query parameter angehaengt
+- [ ] Parameter: data (key value) werden urlencoded an body angehaengt : application/x-www-form-urlencoded oder als txt
 - [ ] Cookie management - default path / default host setzen auch wenn keiner gesendet
 - [ ] Socket Timeout einbauen
 - [ ] Tests schreiben
@@ -16,6 +18,7 @@
 - [ ] Download von files testen
  
 ## Goals Advanced
+- [ ] Parameter: file: support for multipart/form-data
 - [ ] Websockets implementieren
 - [ ] Transfer Encoding gzip empfangen unterstuetzen
 - [ ] Transfer Encoding gzip senden unterstuetzen

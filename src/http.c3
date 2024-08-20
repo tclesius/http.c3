@@ -16,6 +16,12 @@ struct Header
     String value;
 }
 
+struct Param
+{
+    String key;
+    String value;
+}
+
 struct Response 
 {
     ContentIterator content_iter;
@@ -228,8 +234,8 @@ fn void Request.send(&self, TcpSocket* socket)
 {
     DString data;
     data.temp_init();
-    // write request line
-    data.appendf("%s %s %s\r\n", self.method, self.url.path, self.protocol);
+    // write request line and url encode the query params
+    data.appendf("%s %s%s %s\r\n", self.method, self.url.path, self.url.query, self.protocol);
     // write request headers
     foreach(header: self.headers)
     {
@@ -269,9 +275,34 @@ fn void Request.send(&self, TcpSocket* socket)
     }
 }
 
-fn Response request(String method, String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "", bool stream = false) 
+fn Response request(String method, String url, Param[] params = {}, Cookie[] cookies = {}, Header[] headers = {}, String body = "", bool stream = false) 
 {
     Url req_url = url::parse(url)!!;
+
+    if(params.len > 0)
+    {
+        DString query;
+        
+        query.append(req_url.query); // TODO: these query params need to be split up and quoted 
+        
+        foreach(ix, param: params){
+            if (ix == 0 && req_url.query.len > 0)
+            {
+                query.append('&');
+            }  
+            if (ix == 0 && req_url.query.len == 0)
+            {
+                query.append('?');
+            }  
+            query.appendf("%s=%s", url::quote(param.key), url::quote(param.value));
+            if (ix < params.len)
+            {
+                query.append('&');
+            }
+        }
+        req_url.query = query.str_view();
+    }
+
     Response res = {
         .stream = stream
     };
@@ -314,33 +345,33 @@ fn String Response.text(&self)
     return self.content_iter.body.str_view();
 }
 
-fn Response get(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "", bool stream = false) 
+fn Response get(String url, Param[] params, Cookie[] cookies = {}, Header[] headers = {}, String body = "", bool stream = false) 
 { 
-    return request("GET", url, cookies, headers, body, stream); 
+    return request("GET", url=url, .params=params, .cookies=cookies, .headers=headers, .body=body, .stream=stream); 
 }
 fn Response options(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("OPTIONS", url, cookies, headers, body); 
+    return request("OPTIONS", url=url, .cookies=cookies, .headers=headers, .body=body); 
 }
 fn Response head(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("HEAD", url, cookies, headers, body); 
+    return request("HEAD", url=url, .cookies=cookies, .headers=headers, .body=body); 
 }
 fn Response post(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("POST", url, cookies, headers, body); 
+    return request("POST", url=url, .cookies=cookies, .headers=headers, .body=body); 
 }
 fn Response put(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("PUT", url, cookies, headers, body); 
+    return request("PUT", url=url, .cookies=cookies, .headers=headers, .body=body); 
 }
 fn Response patch(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("PATCH", url, cookies, headers, body); 
+    return request("PATCH", url=url, .cookies=cookies, .headers=headers, .body=body); 
 }
 fn Response delete(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("DELETE", url, cookies, headers, body); 
+    return request("DELETE", .url=url, .cookies=cookies, .headers=headers, .body=body); 
 }
 
 //// Cookie methods

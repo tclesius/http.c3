@@ -5,7 +5,7 @@ import url;
 fn void main()
 {
 	Response res = http::get(
-						.url="http://localhost:8000/stream",
+						.url="http://localhost:8000/echo",
 						.headers={
 							{"Content-Type", "application/json; charset=utf-8"},
 							{"Authorization", "Bearer token123"},
@@ -16,7 +16,8 @@ fn void main()
 							{.name="secret2", .value="abcdefgh", .path="/", .domain="localhost"}
 						},
 						.body="{\"hello\":\"world\"}",
-						.stream=true
+						.params={{"hello", "world"}},
+						.stream=false
 					);
 	//io::printfn(" HTTP Version: %s", req.protocol);
 	//io::printfn(" Headers:");
@@ -33,10 +34,10 @@ fn void main()
 	// Print the body
 	//io::printfn(" Body:\n  %s", req.body);	
 	// Print status code, protocol, and status message
-	//io::printfn("\nResponse:");
-	//io::printfn(" HTTP Version: %s", res.protocol);
-	//io::printfn(" Status Code: %d", res.status_code);
-	//io::printfn(" Status Message: %s", res.status_message);
+	io::printfn("\nResponse:");
+	io::printfn(" HTTP Version: %s", res.protocol);
+	io::printfn(" Status Code: %d", res.status_code);
+	io::printfn(" Status Message: %s", res.status_message);
 
 	// Print all headers
 	//io::printfn(" Headers:");
@@ -60,10 +61,10 @@ fn void main()
 	//	io::printfn("   %s", chunk);
 	//}
 	//Print the body
-	//io::printfn(" Body:\n  %s", res.text());
+	io::printfn(" Body:\n  %s", res.text());
 	
 	//res.json()!!;
 
-	io::printn(url::unquote_plus(url::quote_plus("Hello World!")));
+	//io::printn(url::unquote_plus(url::quote_plus("Hello World!")));
 
 }
