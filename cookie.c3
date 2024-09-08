@@ -1,3 +1,4 @@
+module cookie
 import std::collections::map;
 
 struct Cookie 

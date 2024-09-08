@@ -1,4 +1,5 @@
 module http;
+import cookie;
 import url;
 import std::collections::map;
 import std::collections::object;
