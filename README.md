@@ -17,3 +17,11 @@
 - [ ] Implement session management (see [Python Requests Sessions](https://docs.python-requests.org/en/latest/user/advanced/)).
 - [ ] Build requests individually and send them when ready.
 - [ ] Test downloading files.
+
+## Run example
+
+```sh
+cd examples
+c3c compile main.c3 ../http.c3 ../url.c3 ../cookie.c3
+```
+

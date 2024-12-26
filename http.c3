@@ -86,7 +86,7 @@ fn String! ContentIterator.next(&self, uint chunk_size = 1024)
             hex_len.chop(hex_len.len() - 2);
             
             // Convert the hex length to a uint
-            uint chunk_len = hex_len.str_view().to_uint(.base=16)!!;
+            uint chunk_len = hex_len.str_view().to_uint(base : 16)!!;
             
             if (chunk_len == 0) {
                 // Final chunk (size 0) indicates the end of the stream
@@ -327,31 +327,31 @@ fn String Response.text(&self)
     return self.content_iter.body.str_view();
 }
 
-fn Response get(String url, Param[] params, Cookie[] cookies = {}, Header[] headers = {}, String body = "", bool stream = false) 
+fn Response get(String url, Param[] params = {}, Cookie[] cookies = {}, Header[] headers = {}, String body = "", bool stream = false) 
 { 
-    return request("GET", url=url, .params=params, .cookies=cookies, .headers=headers, .body=body, .stream=stream); 
+    return request("GET", url=url, params : params, cookies : cookies, headers : headers, body : body, stream : stream); 
 }
 fn Response options(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("OPTIONS", url=url, .cookies=cookies, .headers=headers, .body=body); 
+    return request("OPTIONS", url=url, cookies : cookies, headers : headers, body : body);
 }
 fn Response head(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("HEAD", url=url, .cookies=cookies, .headers=headers, .body=body); 
+    return request("HEAD", url=url, cookies : cookies, headers : headers, body : body); 
 }
 fn Response post(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("POST", url=url, .cookies=cookies, .headers=headers, .body=body); 
+    return request("POST", url=url, cookies : cookies, headers : headers, body : body); 
 }
 fn Response put(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("PUT", url=url, .cookies=cookies, .headers=headers, .body=body); 
+    return request("PUT", url=url, cookies : cookies, headers : headers, body : body); 
 }
 fn Response patch(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("PATCH", url=url, .cookies=cookies, .headers=headers, .body=body); 
+    return request("PATCH", url=url, cookies : cookies, headers : headers, body : body); 
 }
 fn Response delete(String url, Cookie[] cookies = {}, Header[] headers = {}, String body = "") 
 { 
-    return request("DELETE", .url=url, .cookies=cookies, .headers=headers, .body=body); 
+    return request("DELETE", url : url, cookies : cookies, headers : headers, body : body); 
 }
